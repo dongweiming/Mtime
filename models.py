@@ -21,6 +21,7 @@ class AliasName(Document, MtimeMixin):
 
 class Actor(EmbeddedDocument):
     '''演员信息'''
+    mid = IntField(default=0, required=True) # 演员链接的唯一ID
     poster = StringField(max_length=100, required=True) # 海报缩略图
     name = StringField(max_length=60, required=True) # 演员名字
     play = StringField(max_length=60, required=True) # 剧中人物
@@ -28,6 +29,7 @@ class Actor(EmbeddedDocument):
 
 class Director(EmbeddedDocument):
     '''导演信息'''
+    mid = IntField(default=0, required=True) # 演员链接的唯一ID
     name = StringField(max_length=60, required=True) # 导演名字
     cnname = StringField(max_length=60) # 可能有中文翻译过来的名字
     poster = StringField(max_length=100) # 海报缩略图
@@ -42,12 +44,12 @@ class Fullcredits(Document, MtimeMixin):
     originalmusic = ListField(StringField(max_length=60, required=True)) # 原创音乐
     cinematography = ListField(StringField(max_length=60, required=True)) # 摄影
     filmediting = ListField(StringField(max_length=60, required=True)) # 剪辑
-    casting = ListField(StringField(max_length=60, required=True)) # 选角导演
-    productiondesigner = ListField(StringField(max_length=60, required=True)) # 艺术指导
+    #casting = ListField(StringField(max_length=60, required=True)) # 选角导演 # 新版本没有这4个字段了...
+    #productiondesigner = ListField(StringField(max_length=60, required=True)) # 艺术指导
     artdirection = ListField(StringField(max_length=60, required=True)) # 美术设计
-    setdecoration = ListField(StringField(max_length=60, required=True)) # 布景师
+    #setdecoration = ListField(StringField(max_length=60, required=True)) # 布景师
     costumedesign = ListField(StringField(max_length=60, required=True)) # 服装设计
-    visualeffects = ListField(StringField(max_length=60, required=True)) # 视觉特效
+    #visualeffects = ListField(StringField(max_length=60, required=True)) # 视觉特效
     assistantdirector = ListField(StringField(max_length=60, required=True)) # 副导演/助理导演
 
 
@@ -58,7 +60,7 @@ class EmbeddedReleaseInfo(EmbeddedDocument):
 
 
 class ReleaseInfo(Document, MtimeMixin):
-    '''上映信息'''
+    '''上映数据, update: 新版(2014, 3, 17)发行数据已经合并到Details里面'''
     country = ListField(EmbeddedDocumentField(EmbeddedReleaseInfo))
 
 
@@ -70,9 +72,8 @@ class Movie(Document, MtimeMixin):
     scorer = IntField(default=0, required=True) # 评分人数
     want = IntField(default=0, required=True) # 想看
     collect = IntField(default=0, required=True) # 收藏数
-    #poster = ListField(beddedDocumentField(Poster))  # 海报缩略图
+    #poster = ListField(EmbeddedDocumentField(Poster))  # 海报缩略图
     #fullcredits = ReferenceField(Fullcredits)
-    #releaseinfo = ListField(EmbeddedDocumentField(Releaseinfo))
     #details = ReferenceField(Details)
     #plot = ListField(EmbeddedDocumentField(Plot))
     #awards =  ListField(EmbeddedDocumentField(Awards))
@@ -116,7 +117,7 @@ class Company(Document, MtimeMixin):
     other =  ListField(StringField()) # 其他公司
 
 
-###### 幕后花絮
+###### Delete in next version
 class ScenesComment(EmbeddedDocument):
     content = StringField(required=True) # 评论内容
     who = StringField(max_length=30, required=True) # 评论者
@@ -126,13 +127,20 @@ class Dialogue(EmbeddedDocument):
     endialogue = StringField(required=True) # 英文对白
     cndialogue = StringField(required=True) # 中文对白翻译
 
+##### END
+###### 幕后花絮
+class EmbeddedScenes(EmbeddedDocument):
+    title = StringField(max_length=30, required=True) # 主题
+    content = ListField(StringField())
+
 
 class Scenes(Document, MtimeMixin):
-    comment = ListField(EmbeddedDocumentField(ScenesComment))
-    make = ListField(StringField()) # 幕后制作
-    scene = ListField(StringField()) # 花絮
-    dialogue = ListField(EmbeddedDocumentField(Dialogue))
-    goofs = ListField(StringField()) # 穿帮镜头
+    '''幕后揭秘 update:新版本很多字段都没有了'''
+    #comment = ListField(EmbeddedDocumentField(ScenesComment))
+    #make = ListField(StringField()) # 幕后制作
+    scene = ListField(EmbeddedDocumentField(EmbeddedScenes)) # 花絮
+    #dialogue = ListField(EmbeddedDocumentField(Dialogue))
+    #goofs = ListField(StringField()) # 穿帮镜头
 
 
 ###### 获奖记录
@@ -154,14 +162,15 @@ class Awardall(EmbeddedDocument):
 
 class Awards(Document, MtimeMixin):
     name = StringField(max_length=30, required=True) # 奖项名字
-    awardall = ListField(EmbeddedDocumentField(Awardall)) # 奖项相关获奖情况
+    award = ListField(EmbeddedDocumentField(Awardall)) # 奖项相关获奖情况
 ###### end
+
 
 class Plot(Document, MtimeMixin):
     '''剧情'''
-    content = StringField() # 剧情片段
-    publisher = StringField() # 发布者
-    publishdate = DateTimeField(default=datetime.now(), required=True) # 发布时间
+    content = ListField(StringField()) # 剧情片段
+    # publisher = StringField() # 发布者, 新版已经不存在
+    # publishdate = DateTimeField(default=datetime.now(), required=True) # 发布时间, 新版已经不存在
 
 
 class Poster(Document, MtimeMixin):
@@ -198,3 +207,14 @@ class IdFinished(Document, MtimeMixin):
 class YearFinished(Document, MtimeMixin):
     '''完成的电影的年份'''
     year = IntField(required=True) # 完成的年份
+
+
+class EmbeddedCharacter(EmbeddedDocument):
+    '''角色介绍, 新版增加'''
+    bigposter = StringField(max_length=100) # 角色大图, 小图在演职员表里面会记录
+    name = StringField(max_length=30, required=True) # 角色
+    introduction = StringField() # 角色介绍
+
+
+class Character(Document, MtimeMixin):
+    character = ListField(EmbeddedDocumentField(EmbeddedCharacter))

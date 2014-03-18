@@ -47,16 +47,15 @@ def mtime_beat():
     y = get_year() + 1 # 要抓取的年份
     instance = fetch(y, 1)
     page = get_movie_pages(instance)
-    print 'interval:', scheduler.get_interval
     if page is None:
         # 执行间隔自适应
-        if scheduler.get_interval > TASK_BEAT * 7:
+        if scheduler.get_interval < TASK_BEAT * 7:
             scheduler.change_interval(incr=True)
         return
     ids = get_movie_ids(instance)
     if ids is None:
         # 间隔自适应也不能太大
-        if scheduler.get_interval > TASK_BEAT * 7:
+        if scheduler.get_interval < TASK_BEAT * 7:
             scheduler.change_interval(incr=True)
         return
     # 当任务继续能执行的时候,回到默认的间隔

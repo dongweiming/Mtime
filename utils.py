@@ -74,11 +74,12 @@ def decode(s):
 
 
 def group(seq, size):
-    '''列表分组'''
+    '''列表分组: 每组size个'''
     l = len(seq)
     for i in range(0, l, size):
         yield seq[i:i+size]
 
 def sleep2(interval=None):
+    '''sleep一定时间'''
     num = interval if interval is not None else INTERVAL
     time.sleep(num)
