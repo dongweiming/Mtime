@@ -1,4 +1,4 @@
-# coding=utf-8
+#coding=utf-8
 from datetime import datetime
 from mongoengine import *
 
@@ -10,6 +10,7 @@ COLORS = ((0, u'黑白'), (1, '彩色'))
 
 
 class MtimeMixin(object):
+    '''大部分模型都有movieid'''
     movieid = IntField(required=True) # 基础类
 
 
@@ -59,11 +60,6 @@ class EmbeddedReleaseInfo(EmbeddedDocument):
     releasetime = DateTimeField(default=datetime.now(), required=True) # 上映时间
 
 
-class ReleaseInfo(Document, MtimeMixin):
-    '''上映数据, update: 新版(2014, 3, 17)发行数据已经合并到Details里面'''
-    country = ListField(EmbeddedDocumentField(EmbeddedReleaseInfo))
-
-
 # 电影信息
 class Movie(Document, MtimeMixin):
     # name = StringField(max_length=30, required=True) # 电影名
@@ -80,41 +76,48 @@ class Movie(Document, MtimeMixin):
     #scenes = ReferenceField(Scenes)
     #company = ReferenceField(Company)
 
+class EmbeddedContent(EmbeddedDocument):
+    type = StringField(max_length=10, required=True) # 比如文本,视频,图片, 内嵌
+    content = StringField() # 内容
+
 
 class EmbeddedComment(EmbeddedDocument):
     name = StringField(max_length=30, required=True) # 发评论人
-    image = StringField(max_length=60, required=True) # 评论人图片url
-    title = StringField(max_length=60, required=True) # 标题
-    content = StringField() # 评论内容
+    commenter_url = StringField(max_length=100) # 评论人的url
+    ac = IntField(default=0, required=True) # 点赞数
+    rc = IntField(default=0, required=True) # 转发数
+    cc = IntField(default=0, required=True) # 评论数
+    url = StringField(max_length=100, required=True) # 原文url
+    poster = StringField(max_length=100) # 原文的海报图
+    image = StringField(max_length=120, required=True) # 评论人图片url
+    title = StringField(max_length=60) # 标题
+    score = FloatField() # 评分, 只是看过的人会评分,但不评分
+    content = ListField(EmbeddedDocumentField(EmbeddedContent))# 评论内容
+    shortcontent = StringField(default='') # 评论内容的简略, 也就是mtime直接显示的那部分
     publishdate = DateTimeField(default=datetime.now()) # 发表时间
 
+    meta = {'allow_inheritance': True}
+
+
+class EmbeddedMicroComment(EmbeddedComment):
+    content = StringField() # 评论内容格式不同
 
 class Comment(Document, MtimeMixin):
-    comments = ListField(EmbeddedDocumentField(EmbeddedComment))
-
-
-class EmbeddedMicroComment(EmbeddedDocument):
-    name = StringField(max_length=30, required=True) # 发评论人
-    image = StringField(max_length=60, required=True) # 评论人图片url
-    publishdate = DateTimeField(default=datetime.now()) # 发表时间
-    content = StringField() # 评论内容
-    score = FloatField(required=True) # 评分
-    from_ = StringField(max_length=60, required=True) # 来源
-    commentcount = IntField(default=0, required=True) # 评论数
-    repostcount = IntField(default=0, required=True) # 转发数
+    comments = ListField(EmbeddedDocumentField(EmbeddedComment)) # 长评
 
 
 class MicroComment(Document, MtimeMixin):
-    '''微影评'''
-    comments = ListField(EmbeddedDocumentField(EmbeddedMicroComment))
+    microcomments = ListField(EmbeddedDocumentField(EmbeddedMicroComment)) # 微评
 
 
-class Company(Document, MtimeMixin):
-    '''制作/发行'''
-    release = ListField(StringField()) # 发行
-    make = ListField(StringField()) # 制作
-    stunt = ListField(StringField()) # 特技制作
-    other =  ListField(StringField()) # 其他公司
+class Company(EmbeddedDocument):
+    '''制作/发行信息'''
+    #release = ListField(StringField()) # 发行
+    #make = ListField(StringField()) # 制作
+    #stunt = ListField(StringField()) # 特技制作
+    #other =  ListField(StringField()) # 其他公司
+    name = StringField(max_length=60, required=True) # 公司名字
+    country = StringField(max_length=30) # 公司所在国家
 
 
 ###### Delete in next version
@@ -144,25 +147,31 @@ class Scenes(Document, MtimeMixin):
 
 
 ###### 获奖记录
-class Awarddetail(EmbeddedDocument):
-    name = StringField(max_length=30, required=True) # 具体奖项名字
-    people = StringField(max_length=60, required=True) # 获奖人
+class Awardspeople(EmbeddedDocument):
+    '''s实现起来比较麻烦, 展示没用'''
+    name = ListField(StringField(max_length=60, required=True)) # 获奖或者提名人
+    awardtype = StringField(max_length=30, required=True) # 具体奖项名字 比如最佳影片
 
 
-class Awardinfo(EmbeddedDocument):
-    type = StringField(max_length=10, required=True) # 获奖类型
-    detail = ListField(EmbeddedDocumentField(Awarddetail))
+class Awardsinfo(EmbeddedDocument):
+    type = StringField(max_length=30, required=True) # 提名或者获奖
+    #peoples = ListField(StringField(max_length=30))
+    # Hacks: 内嵌的列表第一样式上面Awardspeople的name, 第二项是awardtype
+    peoples = ListField(ListField(required=True)) # 获奖的人, 但不是必选,有些奖项是整个电影的成就
 
 
-class Awardall(EmbeddedDocument):
+class Oneawards(EmbeddedDocument):
+    name = StringField(max_length=30, required=True) # 奖项名, 比如 奥斯卡金像奖
     period = IntField(required=True) # 届
     year = IntField(required=True) # 年份
-    all = ListField(EmbeddedDocumentField(Awardinfo))
-
+    #nominatecount = IntField(required=True) # 提名的次数 这个其实可以根据具体情况计算
+    #awardcount = IntField(required=True) # 获奖次数
+    awards = ListField(EmbeddedDocumentField(Awardsinfo)) # 获奖的具体情况: 奖项-人物
+    #nominate = ListField(EmbeddedDocumentField(Awardinfo)) # 提名的具体情况
 
 class Awards(Document, MtimeMixin):
-    name = StringField(max_length=30, required=True) # 奖项名字
-    award = ListField(EmbeddedDocumentField(Awardall)) # 奖项相关获奖情况
+    '''获奖记录'''
+    awards = ListField(EmbeddedDocumentField(Oneawards))
 ###### end
 
 
@@ -173,40 +182,47 @@ class Plot(Document, MtimeMixin):
     # publishdate = DateTimeField(default=datetime.now(), required=True) # 发布时间, 新版已经不存在
 
 
-class Poster(Document, MtimeMixin):
-    '''海报缩略图'''
-    no = IntField() # 号码
-    url = StringField(max_length=60, required=True) # 图片地址
-
-
 class Details(Document, MtimeMixin):
     '''详细信息'''
-    alias = ListField(StringField()) # 中文/外文片名
-    type =  ListField(StringField()) # 电影类型
-    time = IntField(default=0, required=True) # 片长
-    country = StringField(max_length=60, required=True) # 国家/地区
+    enalias = ListField(StringField()) # 中文片名
+    cnalias = ListField(StringField()) # 外文片名
+    #type =  ListField(StringField()) # 电影类型
+    time = StringField(max_length=60, required=True) # 片长
+    #country = StringField(max_length=60, required=True) # 国家/地区
     language = ListField(StringField(max_length=10, required=True)) # 对白语言
-    color = StringField(required=True, choices=COLORS) # 色彩
-    format = StringField(max_length=30, required=True) # 幅面
-    mixin = ListField(StringField(max_length=20)) # 混音
-    mpaa = StringField() # MPAA评级
-    level = ListField(StringField(max_length=30)) # 级别
+    #color = StringField(required=True, choices=COLORS) # 色彩
+    #format = StringField(max_length=30, required=True) # 幅面
+    #mixin = ListField(StringField(max_length=20)) # 混音
+    #mpaa = StringField() # MPAA评级
+    #level = ListField(StringField(max_length=30)) # 级别
     cost = StringField() # 制作成本
-    start = ListField(DateTimeField()) # 拍摄日期
-    camera = StringField() # 摄影机
-    filmformat = StringField() # 摄制格式
-    printformat = StringField() # 洗印格式
+    date = ListField(DateTimeField()) # 拍摄日期
+    #camera = StringField() # 摄影机
+    #filmformat = StringField() # 摄制格式
+    #printformat = StringField() # 洗印格式
+    release = ListField(EmbeddedDocumentField(EmbeddedReleaseInfo)) # 新增的发布情况
+    publish = ListField(EmbeddedDocumentField(Company)) # 发行公司
+    make = ListField(EmbeddedDocumentField(Company)) # 制作公司
+    site = ListField(StringField(max_length=60, required=True)) # 官方网址
+    # 关联电影?
 
 
 class IdFinished(Document, MtimeMixin):
     '''完成的电影ids, 防各种原因重新抓取'''
     year = IntField(required=True) # 分配的电影的年份
     ids = ListField(required=True) # 电影唯一id
+    meta = {
+        'indexes': ['-year']
+    }
 
 
-class YearFinished(Document, MtimeMixin):
+class YearFinished(Document):
     '''完成的电影的年份'''
     year = IntField(required=True) # 完成的年份
+    meta = {
+        'indexes': ['-year'],
+        'ordering': ['-year']
+    }
 
 
 class EmbeddedCharacter(EmbeddedDocument):

@@ -16,6 +16,8 @@ MIN_YEAR = 1194
 TASK_BEAT = 600
 # 每个任务被分配的电影数
 TASK_BEAT_NUM = 20
+# 每个worker爬取任务的间隔 单位s
+WORKER_TASK = 60
 
 # 电影查询, 根据年代, 电影名
 SEARCH_PAGE = 'http://movie.mtime.com/movie/search/section/#sortType=8&viewType=1&year={year}'
@@ -27,3 +29,7 @@ SEARCH_API = 'http://service.channel.mtime.com/service/search.mcs'
 MOVIE_API = 'http://service.mtime.com/database/databaseService.m'
 
 MOVIE_PAGE = 'http://http://movie.mtime.com/{id}/&t={timestamp}'
+
+# 获取评论的评论转发赞
+
+COMMENT_API = 'http://service.library.mtime.com/Movie.api'

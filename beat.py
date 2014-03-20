@@ -16,7 +16,7 @@ def get_year():
     '''根据年份从前向后,获取当前要执行的第一个年份(min)'''
     obj = YearFinished.objects
     if obj:
-        c_year = obj.order_by('-year').first()
+        c_year = obj.first()
         return c_year.year
     else:
         return MIN_YEAR - 1
@@ -70,7 +70,13 @@ def mtime_beat():
     if page > 1:
         for p in range(2, page+1):
             instance = fetch(y, p)
-            y_list.extend(get_movie_ids(instance))
+            ids = get_movie_ids(instance)
+            if ids is None:
+                # 间隔自适应也不能太大
+                if scheduler.get_interval < TASK_BEAT * 7:
+                    scheduler.change_interval(incr=True)
+                return
+            y_list.extend(ids)
             sleep2()
     obj = IdFinished.objects(year=y).first()
     if obj is not None:

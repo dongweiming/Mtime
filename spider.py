@@ -138,3 +138,22 @@ class Movie(Spider):
             return d
         else:
             return params
+
+
+class Comment(Spider):
+
+    def make_query(self):
+        params = self.params
+        if not isinstance(params, OrderedDict):
+            d = OrderedDict()
+            d['Ajax_CallBack'] = True
+            d['Ajax_CallBackType'] = 'Mtime.Library.Services'
+            d['Ajax_CallBackMethod'] = 'GetMovieReviewAndTweetCountInfo'
+            d['Ajax_CrossDomain'] = 1
+            d['Ajax_RequestUrl'] = params['Ajax_RequestUrl']
+            d['t'] = self.get_timestamp()
+            d['Ajax_CallBackArgument0'] = params['Ajax_CallBackArgument0']
+            d['Ajax_CallBackArgument1'] = params['Ajax_CallBackArgument1']
+            return d
+        else:
+            return params
