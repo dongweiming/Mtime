@@ -10,7 +10,6 @@ from datetime import datetime
 from urllib2 import HTTPError
 
 from spider import Spider, Movie, Comment
-from utils import group
 from conf import MOVIE_API, MOVIE_PAGE, COMMENT_API
 
 movie_regex = re.compile(r'http://movie.mtime.com/(\d+)/')
@@ -22,12 +21,13 @@ detail_country_regex = re.compile(r'\[(.*)\]')
 mtime_vcodeValid_regex = re.compile(r'\"vcodeValid\":false,\"isRobot\":true')
 
 date_regex = re.compile(ur'(\d+)年(\d+)月(\d+)日')
-name_regex = re.compile(ur'([\u4e00-\u9fa5]+)\s+(.*)') # 匹配中英文名字
+name_regex = re.compile(ur'([\u4e00-\u9fa5]+)\s+(.*)')  # 匹配中英文名字
 favoritedCount_regex = re.compile(r'\"favoritedCount\":(\d+),')
 rating_regex = re.compile(r'"rating":(\d.?\d),')
 ratingCount_regex = re.compile(r'"ratingCount":(\d+),')
 wantToSeeCount_regex = re.compile(r'"wantToSeeCount":(\d+),')
-comment_regex = re.compile(r'\"reviewPraiseCount\":\[(.*)\].*\"reviewPraiseStatus\".*\"reviewShareCount\":\[(.*)\].*\"reviewCommentCount\":\[(.*)\]')
+comment_regex = re.compile(
+    r'\"reviewPraiseCount\":\[(.*)\].*\"reviewPraiseStatus\".*\"reviewShareCount\":\[(.*)\].*\"reviewCommentCount\":\[(.*)\]')  # noqa
 
 movie_url = 'http://movie.mtime.com/{}/{}'
 
@@ -46,7 +46,9 @@ def make_datetime(text):
 
 
 class Parse(object):
+
     '''爬取标准类'''
+
     def __init__(self, movie_id):
         self.id = movie_id
         self._alias = defaultdict(set)
@@ -57,9 +59,6 @@ class Parse(object):
         raise NotImplementedError()
 
     def xpath(self):
-        raise NotImplementedError()
-
-    def spider(self):
         raise NotImplementedError()
 
     @property
@@ -93,9 +92,11 @@ class Parse(object):
         return self.page.xpath('//a[@id=\"key_nextpage\\"]')
 
 
-###### Delete in next version
+# Delete in next version
 class ReleaseInfoParse(Parse):
+
     '''新版(2014, 3, 17)发行数据已经合并到Details里面'''
+
     def set_url(self):
         self.url = movie_url.format(self.id, 'releaseinfo.html')
 
@@ -114,7 +115,9 @@ class ReleaseInfoParse(Parse):
             self.d['country'] += [{'encountry': en, 'cncountry': cn,
                                    'releasetime': date}]
 
-###### END
+# END
+
+
 class DetailsParse(Parse):
 
     def set_url(self):
@@ -131,21 +134,24 @@ class DetailsParse(Parse):
         other = part[1].xpath('dd')
         cost = other[0].xpath('p')[0].text
         date = make_datetime(other[1].xpath('p')[0].text)
-        language = (i.text.encode('utf-8').replace('/', '').strip() \
+        language = (i.text.encode('utf-8').replace('/', '').strip()
                     for i in other[2].xpath('p/a'))
-        site = [other[3].xpath('p/a')[0].text, # 官网缩写
-                other[3].xpath('p/a')[0].attrib['href']] # 官网url
+        site = [other[3].xpath('p/a')[0].text,  # 官网缩写
+                other[3].xpath('p/a')[0].attrib['href']]  # 官网url
         # 发行信息
-        part = self.page.xpath('//dl[@id="releaseDateRegion"]/dd//div/ul/li/div[@class="countryname"]/p/span')
+        part = self.page.xpath(
+            '//dl[@id="releaseDateRegion"]/dd//div/ul/li/div[@class="countryname"]/p/span')  # noqa
         release = []
         for p in part:
             encountry = p.text.strip()
             cncountry = p.getparent().text.strip()
-            time_text = p.getparent().getparent().getparent().xpath('div[@class=\"datecont\"]')[0].text
+            time_text = p.getparent().getparent().getparent().xpath(
+                'div[@class=\"datecont\"]')[0].text
             releasetime = make_datetime(time_text)
             release.append({'encountry': encountry, 'cncountry': cncountry,
                             'releasetime': releasetime})
-        part = self.page.xpath('//dl[@id="companyRegion"]/dd/div/div[@class="fl wp49"]')
+        part = self.page.xpath(
+            '//dl[@id="companyRegion"]/dd/div/div[@class="fl wp49"]')
         detail = defaultdict(list)
         for p in part:
             if p.xpath('h4')[0].text == u'制作公司':
@@ -177,6 +183,7 @@ class AwardsParse(Parse):
         for elem in all:
             name = elem.xpath('h3/b')[0].text
             info = defaultdict(list)
+            year, period, awards = 0, 0, '未知'
             try:
                 yp = elem.xpath('h3/span/a')[0].text
             except:
@@ -218,7 +225,7 @@ class AwardsParse(Parse):
                 for k, v in info.items():
                     awards.append(dict(type=k, peoples=v))
                 self.d['awards'] += [dict(name=name, year=year, period=period,
-                                      awards=awards)]
+                                          awards=awards)]
 
 
 class CommentParse(Parse):
@@ -229,7 +236,7 @@ class CommentParse(Parse):
     def xpath(self):
         all = self.page.xpath('//dl[@class="clearfix"]')
         # 变态的mtime获取评论的方法是通过api服务
-        blogids = [i.attrib['blogid'] \
+        blogids = [i.attrib['blogid']
                    for i in self.page.xpath('//div[@class=\"db_comtool\"]')]
         s = Comment(params={'Ajax_CallBackArgument0': ','.join(blogids),
                             'Ajax_CallBackArgument1': '',
@@ -248,7 +255,7 @@ class CommentParse(Parse):
                 poster = ''
             comment = comments[0]
             t = comment.xpath('h3/a')[0]
-            title = t.text # 文章标题
+            title = t.text  # 文章标题
             url = t.attrib['href']
             try:
                 shortcontent = comment.xpath('p')[0].text.strip()
@@ -273,7 +280,7 @@ class CommentParse(Parse):
             ac, rc, cc = 0, 0, 0
             if comment_api:
                 ac, rc, cc = comment_api[0]
-                p = lambda x: x.split(',')[index-1] # 多了一个div
+                p = lambda x: x.split(',')[index - 1]  # 多了一个div
                 ac, rc, cc = p(ac), p(rc), p(cc)
             self.d['comments'] += [{'commenter_url': commenter_url,
                                     'ac': ac, 'rc': rc, 'url': url,
@@ -286,7 +293,6 @@ class CommentParse(Parse):
                 '''判断还有下一页会传回去继续累加页面,直到没有下一页'''
                 return True
 
-
     def get_content(self):
         '''爬取长评论页'''
         ret = self.spider()
@@ -296,7 +302,7 @@ class CommentParse(Parse):
             istext = elem.xpath('text()')
             if istext:
                 if istext[0].strip():
-                    #文本, 否则空行
+                    # 文本, 否则空行
                     cur_type = 'text'
                     content = istext[0].strip()
                 else:
@@ -324,7 +330,8 @@ class MicroCommentParse(Parse):
         self.url = movie_url.format(self.id, 'shortcomment.html')
 
     def xpath(self):
-        all = self.page.xpath('//div[@class="db_shortcomment db_shortcomlist"]/dl/dd/div')
+        all = self.page.xpath(
+            '//div[@class="db_shortcomment db_shortcomlist"]/dl/dd/div')
         tweetids = [i.attrib['tweetid'] for i in all]
         s = Comment(params={'Ajax_CallBackArgument0': '',
                             'Ajax_CallBackArgument1': ','.join(tweetids),
@@ -398,11 +405,10 @@ class ScenesParse(Parse):
             except IndexError:
                 xpath = 'div/'
                 title = elem.xpath(xpath + 'h3')[0].text
-            txt = ''
             l = []
             for i in elem.xpath(xpath + 'div/p|div/dl/dd|dl/dd'):
                 l.extend(filter(lambda x: x.strip(), i.xpath('text()')))
-            self.d['scene'] += [{'title': title, 'content':l}]
+            self.d['scene'] += [{'title': title, 'content': l}]
 
 
 class PlotParse(Parse):
@@ -504,7 +510,9 @@ class FullcreditsParse(Parse):
             one_actor['play'] = play
             self.d['actor'] += [one_actor]
 
-### 通过搜索接口获取要爬取的电影ids
+# 通过搜索接口获取要爬取的电影ids
+
+
 def get_movie_ids(instance):
     '''获取电影在mtime的唯一id'''
     if mtime_vcodeValid_regex.search(instance.content):
@@ -515,13 +523,14 @@ def get_movie_ids(instance):
 def get_movie_pages(instance):
     '''获取当前年份包含电影的页数'''
     try:
-        return max([int(i[1]) for i in movie_page_regex.findall(instance.content)])
+        return max([int(i[1]) for i in
+                    movie_page_regex.findall(instance.content)])
     except ValueError:
         # 只有一页
         if mtime_vcodeValid_regex.search(instance.content):
             return
         return 1
-### end
+# end
 
 
 def checkmatch(regex, instance):
@@ -532,7 +541,9 @@ def checkmatch(regex, instance):
     else:
         return match[0]
 
-### 通过javascript获取评分等信息
+# 通过javascript获取评分等信息
+
+
 def get_movie_info(id):
     s = Movie(params={'Ajax_CallBackArgument1': id,
                       'Ajax_RequestUrl': MOVIE_PAGE.format(

@@ -15,6 +15,7 @@ from datetime import datetime
 from collections import OrderedDict
 
 from utils import get_user_agent
+from log import error, debug
 
 
 # deflate support
@@ -38,7 +39,8 @@ class ContentEncodingProcessor(urllib2.BaseHandler):
         # 默认的头信息
         req.add_header('Accept-Encoding', 'gzip, deflate')
         req.add_header('User-Agent', get_user_agent())
-        req.add_header('Accept-Language', 'zh-cn,zh;q=0.8,en-us;q=0.5,en;q=0.3')
+        req.add_header('Accept-Language',
+                       'zh-cn,zh;q=0.8,en-us;q=0.5,en;q=0.3')
         if self.additional_headers is not None:
             req.headers.update(self.additional_headers)
         if self.cookiejar is not None:
@@ -70,7 +72,8 @@ class ContentEncodingProcessor(urllib2.BaseHandler):
 
 
 class Spider(object):
-    def __init__(self, cookie_support=True, additional_headers=None, params={}):
+    def __init__(self, cookie_support=True, additional_headers=None,
+                 params={}):
         self.cookie_support = cookie_support
         self.additional_headers = additional_headers
         self.params = params
@@ -80,6 +83,7 @@ class Spider(object):
         return {}
 
     def fetch(self, url):
+        debug('Fetch Url: {} start...'.format(url))
         opener = urllib2.build_opener(
             ContentEncodingProcessor(self.cookie_support,
                                      self.additional_headers),
@@ -90,6 +94,7 @@ class Spider(object):
             url = '{}?{}'.format(url, params)
         req = urllib2.Request(url)
         self.content = urllib2.urlopen(req).read()
+        debug('Fetch Url: {} done'.format(url))
 
     @classmethod
     def get_timestamp(cls):
@@ -129,7 +134,8 @@ class Movie(Spider):
             # TODO 优化,从beat剥离
             d = OrderedDict()
             d['Ajax_CallBack'] = True
-            d['Ajax_CallBackType'] = 'Mtime.Community.Controls.CommunityPages.DatabaseService'
+            service = 'Mtime.Community.Controls.CommunityPages.DatabaseService'
+            d['Ajax_CallBackType'] = service
             d['Ajax_CallBackMethod'] = 'LoadData2'
             d['Ajax_CrossDomain'] = 1
             d['Ajax_RequestUrl'] = params['Ajax_RequestUrl']

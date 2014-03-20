@@ -9,6 +9,12 @@ DATABASE = 'mtime'
 # 爬取页面间的间隔, 单位s
 INTERVAL = 10
 
+# 网卡
+IFNAME = 'eth0'
+
+# 接收日志的服务器IP
+SERVER_HOST = '127.0.0.1'
+
 # 爬取的年份设置
 MIN_YEAR = 1194
 
@@ -20,7 +26,7 @@ TASK_BEAT_NUM = 20
 WORKER_TASK = 60
 
 # 电影查询, 根据年代, 电影名
-SEARCH_PAGE = 'http://movie.mtime.com/movie/search/section/#sortType=8&viewType=1&year={year}'
+SEARCH_PAGE = 'http://movie.mtime.com/movie/search/section/#sortType=8&viewType=1&year={year}'  # noqa
 
 # MTIME的搜索结果是通过api和javascript动态添加的
 SEARCH_API = 'http://service.channel.mtime.com/service/search.mcs'
