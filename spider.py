@@ -15,7 +15,7 @@ from datetime import datetime
 from collections import OrderedDict
 
 from utils import get_user_agent
-from log import error, debug
+from log import debug
 
 
 # deflate support

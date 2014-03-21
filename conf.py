@@ -7,7 +7,9 @@ PORT = 27017
 DATABASE = 'mtime'
 
 # 爬取页面间的间隔, 单位s
-INTERVAL = 10
+INTERVAL = 8
+# 提示验证码的重试间隔
+VERIFY_INTERVAL = 1200
 
 # 网卡
 IFNAME = 'eth0'
@@ -23,7 +25,7 @@ TASK_BEAT = 600
 # 每个任务被分配的电影数
 TASK_BEAT_NUM = 20
 # 每个worker爬取任务的间隔 单位s
-WORKER_TASK = 60
+TASK_WORKER = 60
 
 # 电影查询, 根据年代, 电影名
 SEARCH_PAGE = 'http://movie.mtime.com/movie/search/section/#sortType=8&viewType=1&year={year}'  # noqa

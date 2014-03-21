@@ -2,14 +2,16 @@
 
 from datetime import datetime
 
-from conf import TASK_BEAT
+from conf import TASK_BEAT, TASK_WORKER
 from schedulers import Task
 
 
 def init_task_db():
     # init beat
-    task = Task(type='beat', last_run_at=datetime.now(), interval=TASK_BEAT)
-    task.save()
+    task = Task.objects.get_or_create(type='beat')[0]
+    task.update(set__interval=TASK_BEAT, set__last_run_at=datetime.now())
+    worker = Task.objects.get_or_create(type='worker')[0]
+    worker.update(set__interval=TASK_WORKER, set__last_run_at=datetime.now())
 
 
 def main():

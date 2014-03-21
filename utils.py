@@ -91,6 +91,7 @@ def sleep2(interval=None):
 
 def get_ip_address(ifname=IFNAME):
     '''获取网卡的ip地址'''
+    return '127.0.0.1'
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     return socket.inet_ntoa(fcntl.ioctl(
         s.fileno(),

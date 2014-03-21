@@ -11,6 +11,7 @@ from urllib2 import HTTPError
 
 from spider import Spider, Movie, Comment
 from conf import MOVIE_API, MOVIE_PAGE, COMMENT_API
+from log import debug, warn
 
 movie_regex = re.compile(r'http://movie.mtime.com/(\d+)/')
 people_regex = re.compile(r'http://people.mtime.com/(\d+)/')
@@ -55,8 +56,9 @@ class Parse(object):
         self.set_url()
         self.d = defaultdict(list)
 
-    def set_url(self):
-        raise NotImplementedError()
+    def set_url(self, url):
+        self.url = url
+        self.original_url = url # 其中获取评论页或自动跳转走,这里保留原url供解析下一页使用
 
     def xpath(self):
         raise NotImplementedError()
@@ -78,14 +80,14 @@ class Parse(object):
         # 因为中文被编码成utf-8之后变成'/u2541'之类的形式，lxml一遇到"/"就会认为其标签结束
         return etree.HTML(s.content.decode('utf-8'))
 
-    def result(self):
-        '''主方法'''
+    def __call__(self):
+        '''调用类'''
         self.page = self.spider()
         if self.page is None:
             return
-        self.xpath()
+        hasnext = self.xpath() is not None
         self.d['movieid'] = self.id
-        return self.d
+        return self.d, hasnext
 
     def check_next_page(self):
         '''检查是否有下一页'''
@@ -444,8 +446,12 @@ class FullcreditsParse(Parse):
         type = ['director', 'writer', 'produced', 'cinematography',
                 'filmediting', 'originalmusic', 'artdirection',
                 'costumedesign', 'assistantdirector']
-
-        for offset in range(len(type)):
+        if type > common:
+            # 有些老电影没有全部数据
+            l = len(common)
+        else:
+            l = len(type)
+        for offset in range(l):
             c = common[offset]
             for i in c.xpath('p'):
                 name = i.xpath('a')[0].text
@@ -453,6 +459,7 @@ class FullcreditsParse(Parse):
                     continue
                 match = name_regex.findall(name)
                 if match:
+                    match = match[0]
                     self._alias[match[1]].add(match[0])
                     name = match[1]
                 self.d[type[offset]] += [name]
@@ -464,9 +471,12 @@ class FullcreditsParse(Parse):
         director_dict = {}
         if img:
             director_dict['poster'] = img[0].attrib['src']
-        href = director.xpath('div/a')[0].attrib['href']
-        people = people_regex.findall(href)
-        director_dict['mid'] = people[0]
+        try:
+            href = director.xpath('div/a')[0].attrib['href']
+            people = people_regex.findall(href)
+            director_dict['mid'] = people[0]
+        except IndexError:
+            warn('[{}] No director'.format(self.id))
         cn = director.xpath('div/h3/a')
         if cn:
             name = director.xpath('div/p/a')[0].text
@@ -506,7 +516,11 @@ class FullcreditsParse(Parse):
                 if name is None:
                     name = cnname
                 self._alias[name].add(cnname)
-            play = a.xpath(name_path)[-1].text
+            try:
+                play = a.xpath(name_path)[-1].text
+            except IndexError:
+                # 无饰演角色信息
+                play = ''
             one_actor['play'] = play
             self.d['actor'] += [one_actor]
 
@@ -541,17 +555,16 @@ def checkmatch(regex, instance):
     else:
         return match[0]
 
+
 # 通过javascript获取评分等信息
-
-
 def get_movie_info(id):
     s = Movie(params={'Ajax_CallBackArgument1': id,
                       'Ajax_RequestUrl': MOVIE_PAGE.format(
                           id=id, timestamp=Movie.get_timestamp())})
     s.fetch(MOVIE_API)
-    favoritedCount = checkmatch(favoritedCount_regex, s)
+    favorited = checkmatch(favoritedCount_regex, s)
     rating = checkmatch(rating_regex, s)
-    ratingCount = checkmatch(ratingCount_regex, s)
-    wantToSeeCount = checkmatch(wantToSeeCount_regex, s)
+    ratingcount = checkmatch(ratingCount_regex, s)
+    want = checkmatch(wantToSeeCount_regex, s)
     del s, id
     return locals()

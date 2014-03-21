@@ -2,14 +2,17 @@
 '''
 把需要抓取的电影id发送给MQ, 他是一切任务的生成源
 '''
+from mongoengine.errors import NotUniqueError
+
 from parse import get_movie_ids, get_movie_pages
 from utils import get_unfinished, group, sleep2
 from spider import Search
-from conf import SEARCH_PAGE, SEARCH_API, MIN_YEAR, TASK_BEAT_NUM, TASK_BEAT
+from conf import (SEARCH_PAGE, SEARCH_API, MIN_YEAR, TASK_BEAT_NUM, TASK_BEAT,
+                  VERIFY_INTERVAL)
 from models import YearFinished, IdFinished
 from schedulers import Message
-from control import Scheduler, periodic
-from log import error, info, debug, warn
+from control import Scheduler, periodic, run
+from log import error, debug, warn
 
 scheduler = Scheduler('beat')
 
@@ -40,7 +43,6 @@ def fetch(year, page):
                        'Ajax_RequestUrl': SEARCH_PAGE.format(year=year)
                        })
     s.fetch(SEARCH_API)
-    print s.content
     return s
 
 
@@ -76,7 +78,8 @@ def mtime_beat():
         sleep2()
         return mtime_beat()
     if page > 1:
-        for p in range(2, page + 1):
+        p = 2
+        while p <= page:
             instance = fetch(y, p)
             debug('Fetch Year:{} Page:{}'.format(y, p))
             ids = get_movie_ids(instance)
@@ -84,8 +87,12 @@ def mtime_beat():
                 # 间隔自适应也不能太大
                 if scheduler.get_interval < TASK_BEAT * 7:
                     scheduler.change_interval(incr=True)
-                return
+                    # 出现需要验证码 手动输入或者等待一段时间后重试,直到能正常使用
+                    sleep2(VERIFY_INTERVAL)
+                    continue
+                ids = []
             y_list.extend(ids)
+            p += 1
             sleep2()
     obj = IdFinished.objects(year=y).first()
     if obj is not None:
@@ -95,15 +102,19 @@ def mtime_beat():
     to_process = get_unfinished(has_finished, y_list)
     # 给相应队列添加任务
     for payload in group(to_process, TASK_BEAT_NUM):
-        for task in ['Fullcredits', 'Releaseinfo', 'Movie', 'Comment',
-                     'MicroComment', 'Company', 'Scenes', 'Awards',
-                     'Plot', 'Poster', 'Details']:
+        for task in ['Fullcredits', 'Movie', 'Comment', 'Character',
+                     'MicroComment', 'Scenes', 'Awards', 'Plot',
+                     'Details']:
             debug('Push payload: {} to {} Queue'.format(payload, task))
-            Message(task=task, payload=payload).save()
+            try:
+                Message(year=y, task=task, payload=payload).save()
+                # Hack一下
+                #Message.objects.get_or_create(year=y, task=task, payload=payload)
+            except NotUniqueError:
+                debug('Duplicate insert: [{}], payload: {}'.format(task, payload))
     # 当前年份数据已经入MQ
     YearFinished(year=y).save()
     debug('Year: {} done'.format(y))
-    # IdFinished.objects(year=y).update(add_to_set__ids=to_process)
 
 
 def main():
@@ -112,4 +123,6 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # 假如有各种奇怪的问题,可以使用下注释的不放在后台
+    #main()
+    run(main, __file__)

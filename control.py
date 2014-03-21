@@ -12,7 +12,7 @@ from signal import SIGKILL
 from os.path import join, splitext, basename
 
 from schedulers import Task
-from log import info
+from log import info, debug
 
 Event = namedtuple('Event', 'time priority action argument')
 
@@ -34,7 +34,7 @@ class Scheduler(object):
             interval = self.task.interval / 2
         elif interval is not None:
             interval = interval
-        debug('Change interval to: ' + interval)
+        debug('Change interval to: ' + str(interval))
         self.task.update(set__interval=interval)
 
     @property

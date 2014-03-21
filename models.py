@@ -15,7 +15,7 @@ class MtimeMixin(object):
     movieid = IntField(required=True)  # 基础类
 
 
-class AliasName(Document, MtimeMixin):
+class AliasName(Document):
 
     '''数据库中存在的名字和别名(英文名等)'''
     name = StringField(max_length=60, required=True)  # 数据库中存在的名字
@@ -26,7 +26,7 @@ class Actor(EmbeddedDocument):
 
     '''演员信息'''
     mid = IntField(default=0, required=True)  # 演员链接的唯一ID
-    poster = StringField(max_length=100, required=True)  # 海报缩略图
+    poster = StringField(max_length=100)  # 海报缩略图
     name = StringField(max_length=60, required=True)  # 演员名字
     play = StringField(max_length=60, required=True)  # 剧中人物
 
@@ -74,11 +74,11 @@ class EmbeddedReleaseInfo(EmbeddedDocument):
 # 电影信息
 class Movie(Document, MtimeMixin):
     # name = StringField(max_length=30, required=True) # 电影名
-    score = FloatField(required=True)  # 评分
-    evaluate = StringField(max_length=30, required=True)  # 评价
-    scorer = IntField(default=0, required=True)  # 评分人数
+    rating = FloatField(required=True)  # 评分
+    #evaluate = StringField(max_length=30, required=True)  # 评价
+    ratingcount = IntField(default=0, required=True)  # 评分人数
     want = IntField(default=0, required=True)  # 想看
-    collect = IntField(default=0, required=True)  # 收藏数
+    favorited = IntField(default=0, required=True)  # 收藏数
     # poster = ListField(EmbeddedDocumentField(Poster))  # 海报缩略图
     #fullcredits = ReferenceField(Fullcredits)
     #details = ReferenceField(Details)
