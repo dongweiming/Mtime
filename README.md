@@ -50,6 +50,7 @@ A spider... ^.^
 1. 初始化任务
 
 ```
+$pip install -r requirements.txt
 $python init.py
 ```
 
@@ -59,7 +60,7 @@ $python init.py
 $python beat.py start
 ```
 
-#. 分布式跑任务的每个服务器跑一个worker程序
+####. 分布式跑任务的每个服务器跑一个worker程序
 
 ```
 python work.py start
