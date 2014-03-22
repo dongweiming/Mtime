@@ -57,7 +57,8 @@ def real_mapper(queryset):
     if queryset.task == 'Movie':
         for process in queryset.payload:
             ret = parse.get_movie_info(process)
-            models.Movie(ret).save()
+            ret['movieid'] = process
+            models.Movie(**ret).save()
         return
     Parse = getattr(parse, queryset.task + 'Parse')
     for process in queryset.payload:
@@ -65,10 +66,14 @@ def real_mapper(queryset):
             p = Parse(process)
             count = 1
             while 1:
-                result, hasnext = p()
+                haspage = p()
+                if haspage is None:
+                    # 很可能404                                                                                        
+                    break
+                result, hasnext = haspage
                 Model(**result).save()
                 # 别名体系, 这样只需要全局记录一个人物就知道他们的全部别名
-                for k, v in this._alias.items():
+                for k, v in p._alias.items():
                     models.AliasName.objects.get_or_create(
                         name=k)[0].update(add_to_set__alias=v)
                 if hasnext:

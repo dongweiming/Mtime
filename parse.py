@@ -131,15 +131,18 @@ class DetailsParse(Parse):
         aliases = part[0].xpath('dd')
         cnalias = [a.text.strip() for a in aliases[0].xpath('p')]
         enalias = [a.text.strip() for a in aliases[1].xpath('p')]
-        time = aliases[2].xpath('p')[0].text
+        try:
+            time = aliases[2].xpath('p')[0].text
+            date = make_datetime(other[1].xpath('p')[0].text)
+            language = (i.text.encode('utf-8').replace('/', '').strip()
+                        for i in other[2].xpath('p/a'))
+            site = [other[3].xpath('p/a')[0].text,  # 官网缩写 
+                    other[3].xpath('p/a')[0].attrib['href']]  # 官网url
+        except IndexError:
+            warn('{} has not some info'.format(self.id))
         # 制作成本, 拍摄日期等数据
         other = part[1].xpath('dd')
         cost = other[0].xpath('p')[0].text
-        date = make_datetime(other[1].xpath('p')[0].text)
-        language = (i.text.encode('utf-8').replace('/', '').strip()
-                    for i in other[2].xpath('p/a'))
-        site = [other[3].xpath('p/a')[0].text,  # 官网缩写
-                other[3].xpath('p/a')[0].attrib['href']]  # 官网url
         # 发行信息
         part = self.page.xpath(
             '//dl[@id="releaseDateRegion"]/dd//div/ul/li/div[@class="countryname"]/p/span')  # noqa
@@ -168,11 +171,13 @@ class DetailsParse(Parse):
                     detail[cur_type] += [{'name': name, 'country': match[0]}]
                 else:
                     detail[cur_type] += [{'name': name}]
-        details = {'enalias': enalias, 'cnalias': cnalias, 'time': time,
-                   'language': language, 'cost': cost, 'date': date,
-                   'release': release, 'site': site}
-        details.update(detail)
-        self.d.update(details)
+#        details = {'enalias': enalias, 'cnalias': cnalias, 'time': time,
+#                   'language': language, 'cost': cost, 'date': date,
+#                   'release': release, 'site': site}
+        d = locals()
+        d.pop('self')
+        detail.update(d)
+        self.d.update(detail)
 
 
 class AwardsParse(Parse):
@@ -446,7 +451,8 @@ class FullcreditsParse(Parse):
         type = ['director', 'writer', 'produced', 'cinematography',
                 'filmediting', 'originalmusic', 'artdirection',
                 'costumedesign', 'assistantdirector']
-        if type > common:
+        
+        if len(type) > len(common):
             # 有些老电影没有全部数据
             l = len(common)
         else:
@@ -462,6 +468,7 @@ class FullcreditsParse(Parse):
                     match = match[0]
                     self._alias[match[1]].add(match[0])
                     name = match[1]
+                print name, offset
                 self.d[type[offset]] += [name]
 
         # 导演信息, 其实我感觉导演可能有多个,单个烦了好几个电影导演都一个.没找到xpath范例
@@ -553,7 +560,7 @@ def checkmatch(regex, instance):
     if not match:
         return 0
     else:
-        return match[0]
+        return int(match[0])
 
 
 # 通过javascript获取评分等信息

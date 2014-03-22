@@ -34,8 +34,8 @@ class Actor(EmbeddedDocument):
 class Director(EmbeddedDocument):
 
     '''导演信息'''
-    mid = IntField(default=0, required=True)  # 演员链接的唯一ID
-    name = StringField(max_length=60, required=True)  # 导演名字
+    mid = IntField(default=0)  # 演员链接的唯一ID
+    name = StringField(max_length=60)  # 导演名字
     cnname = StringField(max_length=60)  # 可能有中文翻译过来的名字
     poster = StringField(max_length=100)  # 海报缩略图
 
@@ -211,9 +211,9 @@ class Details(Document, MtimeMixin):
     enalias = ListField(StringField())  # 中文片名
     cnalias = ListField(StringField())  # 外文片名
     # type =  ListField(StringField()) # 电影类型
-    time = StringField(max_length=60, required=True)  # 片长
+    time = StringField(max_length=60)  # 片长
     # country = StringField(max_length=60, required=True) # 国家/地区
-    language = ListField(StringField(max_length=10, required=True))  # 对白语言
+    language = ListField(StringField(max_length=10))  # 对白语言
     # color = StringField(required=True, choices=COLORS) # 色彩
     # format = StringField(max_length=30, required=True) # 幅面
     # mixin = ListField(StringField(max_length=20)) # 混音
