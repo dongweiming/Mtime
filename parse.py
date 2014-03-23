@@ -468,7 +468,6 @@ class FullcreditsParse(Parse):
                     match = match[0]
                     self._alias[match[1]].add(match[0])
                     name = match[1]
-                print name, offset
                 self.d[type[offset]] += [name]
 
         # 导演信息, 其实我感觉导演可能有多个,单个烦了好几个电影导演都一个.没找到xpath范例
@@ -554,13 +553,13 @@ def get_movie_pages(instance):
 # end
 
 
-def checkmatch(regex, instance):
+def checkmatch(regex, instance, type=int):
     '''抽象代码做多项正则匹配'''
     match = regex.findall(instance.content)
     if not match:
         return 0
     else:
-        return int(match[0])
+        return type(match[0])
 
 
 # 通过javascript获取评分等信息
@@ -570,7 +569,7 @@ def get_movie_info(id):
                           id=id, timestamp=Movie.get_timestamp())})
     s.fetch(MOVIE_API)
     favorited = checkmatch(favoritedCount_regex, s)
-    rating = checkmatch(rating_regex, s)
+    rating = checkmatch(rating_regex, s, float)
     ratingcount = checkmatch(ratingCount_regex, s)
     want = checkmatch(wantToSeeCount_regex, s)
     del s, id

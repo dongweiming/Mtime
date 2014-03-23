@@ -38,7 +38,8 @@ class Worker(object):
             warn("^C pressed")
             self.pool.terminate()
         except:
-            raise
+            import traceback
+            traceback.print_exc()
 
 
 def mapper(queryset):
